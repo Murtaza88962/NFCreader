@@ -4,6 +4,8 @@ import json
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 import time
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
 
 
 def get_info():
@@ -83,9 +85,68 @@ def fill_web_form(patient_data):
     finally:
         # Close the browser window
         driver.quit()
-
-
-patient_data_dict = {field: value for field, value in zip(xpath_mappings.keys(), patient_data)}
     
+    patient_data_dict = {field: value for field, value in zip(xpath_mappings.keys(), patient_data)}
+
+
+def authenticate_google_sheets(creds_path, sheet_name):
+    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+    creds = ServiceAccountCredentials.from_json_keyfile_name(creds_path, scope)
+    client = gspread.authorize(creds)
+    sheet = client.open(sheet_name).sheet1  # assuming the sheet is the first sheet in the workbook
+    return sheet
+
+def get_last_prescription(sheet, patient_id_col, last_prescription_col, patient_id):
+    try:
+        # Find the row where the patient ID matches
+        cell = sheet.find(patient_id)
+        # Get the last prescription from the corresponding column
+        last_prescription = sheet.cell(cell.row, last_prescription_col).value
+        return last_prescription
+    except gspread.exceptions.CellNotFound:
+        print(f"Patient with ID {patient_id} not found in the sheet.")
+        return None
+
+def update_prescription(sheet, patient_id_col, new_prescription_col, patient_id, new_prescription):
+    try:
+        # Find the row where the patient ID matches
+        cell = sheet.find(patient_id)
+        # Update the new prescription in the corresponding column
+        sheet.update_cell(cell.row, new_prescription_col, new_prescription)
+        print("Prescription updated successfully.")
+    except gspread.exceptions.CellNotFound:
+        print(f"Patient with ID {patient_id} not found in the sheet.")
+
+def main(creds_path, sheet_name, patient_id, doctor_name):
+    # Column indices in the Google Sheet (1-based index)
+    patient_id_col = 1
+    last_prescription_col = 12  # Assuming 'Last_Prescription' is in the 12th column
+    new_prescription_col = 13   # Assuming 'New_Prescription' is in the 13th column
+
+    # Authenticate and open the Google Sheet
+    sheet = authenticate_google_sheets(creds_path, sheet_name)
+
+    # Get the last prescription
+    last_prescription = get_last_prescription(sheet, patient_id_col, last_prescription_col, patient_id)
+
+    if last_prescription is not None:
+        print(f"Last Prescription: {last_prescription}")
+
+        # Allow the doctor to write a new prescription
+        new_prescription = input("Doctor, enter the new prescription: ")
+
+        # Update the Google Sheet with the new prescription
+        update_prescription(sheet, patient_id_col, new_prescription_col, patient_id, new_prescription)
+
+if __name__ == "__main__":
+    # Replace these values with your own credentials and sheet name
+    credentials_path = 'path/to/your/credentials.json'
+    sheet_name = 'YourSheetName'
+    
+    # Replace these values with the specific patient and doctor information
+    patient_id = '123'
+    doctor_name = 'Dr. Smith'
+
+    main(credentials_path, sheet_name, patient_id, doctor_name)
     
  
