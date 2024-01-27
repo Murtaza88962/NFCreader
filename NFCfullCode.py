@@ -35,8 +35,8 @@ def get_patient_data_by_id(sheet, patient_id):
 async def handle_websocket(websocket, path):
     try:
         # Authenticate Google Sheets
-        credentials_path = 'path/to/your/credentials.json'
-        sheet_name = 'YourSheetName'
+        credentials_path = 'https://docs.google.com/spreadsheets/d/1FCoRib-XsrcSycRvHtEl8xYAV4KsbTXcr5ZkbkuabsY/edit#gid=0'
+        sheet_name = 'Sheet1'
         sheet = authenticate_google_sheets(credentials_path, sheet_name)
 
         # Start NFC reader
