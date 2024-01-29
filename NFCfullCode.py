@@ -1,23 +1,20 @@
 import asyncio
 import websockets
 import json
-import nfcpy
 import gspread
-from oauth2client.service_account import ServiceAccountCredentials
+from google.oauth2 import service_account
+import nfcpy
 
-
-# Function to authenticate Google Sheets
-def authenticate_google_sheets(creds_path, sheet_name):
-    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-    creds = ServiceAccountCredentials.from_json_keyfile_name(creds_path, scope)
-    client = gspread.authorize(creds)
-    sheet = client.open(sheet_name).sheet1  # assuming the sheet is the first sheet in the workbook
-    return sheet
+# Function to authenticate with Google Sheets and return credentials
+def authenticate_google_sheets(credentials_path):
+    SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
+    credentials = service_account.Credentials.from_service_account_file(credentials_path, scopes=SCOPES)
+    return credentials
 
 # Function to get patient data from Google Sheets based on patient ID
-def get_patient_data_by_id(sheet, patient_id):
+async def get_patient_data(sheet, patient_id):
     try:
-        # Search for the row with the given patient ID
+        # Search for the row with the given patient IxD
         cell = sheet.find(patient_id)
         if cell:
             row = cell.row
@@ -36,9 +33,11 @@ def get_patient_data_by_id(sheet, patient_id):
 async def handle_websocket(websocket, path):
     try:
         # Authenticate Google Sheets
-        credentials_path = 'https://docs.google.com/spreadsheets/d/1FCoRib-XsrcSycRvHtEl8xYAV4KsbTXcr5ZkbkuabsY/edit#gid=0'
+        credentials_path = 'keys.json'
+        credentials = authenticate_google_sheets(credentials_path)
+        gc = gspread.authorize(credentials)
         sheet_name = 'Sheet1'
-        sheet = authenticate_google_sheets(credentials_path, sheet_name)
+        sheet = gc.open(sheet_name).sheet1
 
         # Start NFC reader
         with nfcpy.ContactlessFrontend('usb') as clf:
@@ -51,7 +50,7 @@ async def handle_websocket(websocket, path):
                 patient_id = tag.identifier.hex()
 
                 # Get patient data from Google Sheets based on patient ID
-                patient_data = get_patient_data_by_id(sheet, patient_id)
+                patient_data = await get_patient_data(sheet, patient_id)
 
                 # Send patient data to the client
                 if patient_data:
