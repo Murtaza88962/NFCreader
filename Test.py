@@ -18,9 +18,12 @@ def fetch_patient_data(credentials_file, spreadsheet_id, patient_id):
                 row_index = index + 1
                 break
 
-        # If patient ID found, return corresponding data
+        # If patient ID found, return corresponding data as dictionary
         if row_index:
-            return sheet.row_values(row_index)
+            headers = sheet.row_values(1)
+            patient_values = sheet.row_values(row_index)
+            patient_data = dict(zip(headers, patient_values))
+            return patient_data
         else:
             return None
 
@@ -31,10 +34,12 @@ def fetch_patient_data(credentials_file, spreadsheet_id, patient_id):
 if __name__ == "__main__":
     credentials_file = 'keys.json'  # Path to service account credentials JSON file
     spreadsheet_id = '1FCoRib-XsrcSycRvHtEl8xYAV4KsbTXcr5ZkbkuabsY'  # Replace with your Google Spreadsheet ID
-    patient_id = input("Enter patient ID: ")
+    patient_id = input("Enter patient ID: ")  # Prompt the user to enter patient ID
 
     patient_data = fetch_patient_data(credentials_file, spreadsheet_id, patient_id)
     if patient_data:
-        print("Patient Data:", patient_data)
+        print("Patient Data:")
+        for key, value in patient_data.items():
+            print(f"{key}: {value}")
     else:
         print("Patient ID not found or error occurred.")
