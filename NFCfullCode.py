@@ -3,7 +3,7 @@ import websockets
 import json
 import gspread
 from google.oauth2 import service_account
-import nfcpy
+# import nfcpy
 
 # Function to authenticate with Google Sheets and return credentials
 def authenticate_google_sheets(credentials_path):
