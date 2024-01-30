@@ -1,2 +1,6 @@
-my_env\Scripts\activate
+
 python -m venv my_env
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+my_env\Scripts\activate
+or 
+source my_env/bin/activate
