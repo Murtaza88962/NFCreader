@@ -1,67 +1,62 @@
-import asyncio
-import websockets
-import json
 import gspread
-from google.oauth2 import service_account
-import nfcpy
+from oauth2client.service_account import ServiceAccountCredentials
+import nfc
 
-# Function to authenticate with Google Sheets and return credentials
-def authenticate_google_sheets(credentials_path):
-    SCOPES = ['https://www.googleapis.com/auth/spreadsheets']
-    credentials = service_account.Credentials.from_service_account_file(credentials_path, scopes=SCOPES)
-    return credentials
-
-# Function to get patient data from Google Sheets based on patient ID
-async def get_patient_data(sheet, patient_id):
+def fetch_patient_data(credentials_file, spreadsheet_id, patient_id):
     try:
-        # Search for the row with the given patient IxD
-        cell = sheet.find(patient_id)
-        if cell:
-            row = cell.row
-            # Get data from the corresponding row
-            data = sheet.row_values(row)
-            headers = sheet.row_values(1)  # assuming the first row contains headers
-            patient = dict(zip(headers, data))
-            return patient
+        # Authenticate with Google Sheets API
+        scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
+        credentials = ServiceAccountCredentials.from_json_keyfile_name(credentials_file, scope)
+        gc = gspread.authorize(credentials)
+
+        # Open the Google Spreadsheet
+        sheet = gc.open_by_key(spreadsheet_id).sheet2
+
+        # Find row index of the patient ID
+        row_index = None
+        for index, row in enumerate(sheet.get_all_values()):
+            if row and row[0] == patient_id:
+                row_index = index + 1
+                break
+
+        # If patient ID found, return corresponding data as dictionary
+        if row_index:
+            headers = sheet.row_values(1)
+            patient_values = sheet.row_values(row_index)
+            patient_data = dict(zip(headers, patient_values))
+            return patient_data
         else:
-            print("Patient ID not found.")
             return None
+
     except Exception as e:
-        print(f"Error getting patient data from Google Sheets: {e}")
+        print(f"Error: {e}")
         return None
 
-async def handle_websocket(websocket, path):
-    try:
-        # Authenticate Google Sheets
-        credentials_path = 'keys.json'
-        credentials = authenticate_google_sheets(credentials_path)
-        gc = gspread.authorize(credentials)
-        sheet_name = 'Sheet1'
-        sheet = gc.open(sheet_name).sheet1
-
-        # Start NFC reader
-        with nfcpy.ContactlessFrontend('usb') as clf:
-            print("NFC reader connected.")
-            while True:
-                # Wait for NFC card to be touched
-                tag = clf.connect(rdwr={'on-connect': lambda tag: False})
-
-                # Extract patient ID from NFC card (assuming patient ID is stored as string)
-                patient_id = tag.identifier.hex()
-
-                # Get patient data from Google Sheets based on patient ID
-                patient_data = await get_patient_data(sheet, patient_id)
-
-                # Send patient data to the client
-                if patient_data:
-                    await websocket.send(json.dumps(patient_data))
-                else:
-                    await websocket.send(json.dumps({"error": "Patient ID not found."}))
-
-    except websockets.exceptions.ConnectionClosedOK:
-        print("WebSocket connection closed.")
+def read_nfc():
+    print("Waiting for NFC card...")
+    with nfc.ContactlessFrontend('usb') as clf:
+        while True:
+            target = clf.sense()
+            if target is not None:
+                return bytes(target.uid)
 
 if __name__ == "__main__":
-    start_server = websockets.serve(handle_websocket, "localhost", 8765)
-    asyncio.get_event_loop().run_until_complete(start_server)
-    asyncio.get_event_loop().run_forever()
+    credentials_file = 'keys.json'  
+    spreadsheet_id = '1FCoRib-XsrcSycRvHtEl8xYAV4KsbTXcr5ZkbkuabsY'  
+
+    # Read patient ID from NFC card
+    patient_id_bytes = read_nfc()
+    patient_id = patient_id_bytes.decode('utf-8')
+
+    print("Patient ID from NFC card:", patient_id)
+
+    # Fetch patient data using the retrieved patient ID
+    patient_data = fetch_patient_data(credentials_file, spreadsheet_id, patient_id)
+    
+    if patient_data:
+        print("Patient Data:")
+        for key, value in patient_data.items():
+            print(f"{key}: {value}")
+    else:
+        print("Patient ID not found or error occurred.")
+

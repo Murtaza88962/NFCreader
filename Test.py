@@ -4,7 +4,7 @@ from oauth2client.service_account import ServiceAccountCredentials
 def fetch_patient_data(credentials_file, spreadsheet_id, patient_id):
     try:
         # Authenticate with Google Sheets API
-        scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
+        scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']aaggvvv
         credentials = ServiceAccountCredentials.from_json_keyfile_name(credentials_file, scope)
         gc = gspread.authorize(credentials)
 
@@ -32,14 +32,12 @@ def fetch_patient_data(credentials_file, spreadsheet_id, patient_id):
         return None
 
 if __name__ == "__main__":
-    credentials_file = 'keys.json'  # Path to service account credentials JSON file
-    spreadsheet_id = '1FCoRib-XsrcSycRvHtEl8xYAV4KsbTXcr5ZkbkuabsY'  # Replace with your Google Spreadsheet ID
+    credentials_file = 'keys.json'  
+    spreadsheet_id = '1FCoRib-XsrcSycRvHtEl8xYAV4KsbTXcr5ZkbkuabsY'  
     patient_id = input("Enter patient ID: ")  # Prompt the user to enter patient ID
-
     patient_data = fetch_patient_data(credentials_file, spreadsheet_id, patient_id)
     if patient_data:
         print("Patient Data:")
-        for key, value in patient_data.items():
-            print(f"{key}: {value}")
+        print(f"{key}: {value}")
     else:
         print("Patient ID not found or error occurred.")
