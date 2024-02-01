@@ -1,0 +1,50 @@
+<!-- index.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Minor Project</title>
+    <link href="assets/style.css" rel="stylesheet">
+</head>
+<body style="background-color: #AFAFB1;">
+
+    <section>
+        <style>
+                #header {
+                z-index: 997;
+                transition: all 0.5s;
+                padding: 5px 0;
+                background: #ffffff;
+                border-bottom-left-radius: 20px;
+                border-bottom-right-radius: 20px;
+              }
+        </style>
+
+        <div id="header">
+            <h1 style="text-align: center;" >NFC Health Hub</h1>
+        </div>
+    </section>
+
+    <main>
+        <section>
+            <style>
+                .login   {
+                    text-align: center;
+                    padding-top: 50px;
+                }
+            </style>
+            <div class="login">
+                <img src="assets/back.jpg">
+                <h2>Shri G. S. Institute of Technology and Science</h2>
+                <h3>Department of Biomedical Engineering</h3>
+                <h2>login</h2>
+                        <form action="/submit" method="POST">
+                            <label for="input_text">Login ID</label>
+                            <input type="text" id="input_text" name="user_name">
+                            <input type="text" id="input_text" name="user_pass">
+                            <button type="submit">Submit</button>
+                        </form>
+            </div>
+        </section>
+    </main>
+</body>
+</html>

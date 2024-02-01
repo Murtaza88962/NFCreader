@@ -1,0 +1,13 @@
+body {
+    font-family: "Open Sans", sans-serif;
+    color: #444444;
+  }
+
+  #header {
+    z-index: 997;
+    transition: all 0.5s;
+    padding: 5px 0;
+    background: #ffffff;
+    border-bottom-left-radius: 20px;
+    border-bottom-right-radius: 20px;
+  }

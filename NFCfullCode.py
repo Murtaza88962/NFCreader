@@ -3,7 +3,13 @@ import websockets
 import json
 import gspread
 from google.oauth2 import service_account
-# import nfcpy
+from flask import Flask, render_template
+
+app = Flask(__name__)
+
+@app.route('/')
+def index():
+    return render_template('index.html', name='World')
 
 # Function to authenticate with Google Sheets and return credentials
 def authenticate_google_sheets(credentials_path):
@@ -12,9 +18,9 @@ def authenticate_google_sheets(credentials_path):
     return credentials
 
 # Function to get patient data from Google Sheets based on patient ID
-async def get_patient_data(sheet, patient_id):
+def get_patient_data(sheet, patient_id):
     try:
-        # Search for the row with the given patient IxD
+        # Search for the row with the given patient ID
         cell = sheet.find(patient_id)
         if cell:
             row = cell.row
@@ -30,6 +36,7 @@ async def get_patient_data(sheet, patient_id):
         print(f"Error getting patient data from Google Sheets: {e}")
         return None
 
+# Function to handle websocket communication
 async def handle_websocket(websocket, path):
     try:
         # Authenticate Google Sheets
@@ -39,29 +46,33 @@ async def handle_websocket(websocket, path):
         sheet_name = 'Sheet1'
         sheet = gc.open(sheet_name).sheet1
 
-        # Start NFC reader
-        with nfcpy.ContactlessFrontend('usb') as clf:
-            print("NFC reader connected.")
-            while True:
-                # Wait for NFC card to be touched
-                tag = clf.connect(rdwr={'on-connect': lambda tag: False})
+        while True:
+            message = await websocket.recv()
+            if message == "connect":  # Check if the client wants to connect
+                print("WebSocket connection established.")
+                continue  # Skip the rest of the loop and wait for another message
 
-                # Extract patient ID from NFC card (assuming patient ID is stored as string)
-                patient_id = tag.identifier.hex()
+            # Get patient data from Google Sheets based on patient ID
+            patient_data = get_patient_data(sheet, message)
 
-                # Get patient data from Google Sheets based on patient ID
-                patient_data = await get_patient_data(sheet, patient_id)
-
-                # Send patient data to the client
-                if patient_data:
-                    await websocket.send(json.dumps(patient_data))
-                else:
-                    await websocket.send(json.dumps({"error": "Patient ID not found."}))
+            # Send patient data to the client
+            if patient_data:
+                await websocket.send(json.dumps(patient_data))
+            else:
+                await websocket.send(json.dumps({"error": "Patient ID not found."}))
 
     except websockets.exceptions.ConnectionClosedOK:
         print("WebSocket connection closed.")
 
+async def start_servers():
+    # Start Flask server
+    flask_task = asyncio.to_thread(app.run, debug=True, use_reloader=False, host='localhost', port=5000)
+
+    # Start WebSocket server
+    websocket_server_task = websockets.serve(handle_websocket, "localhost", 8765)
+
+    # Run both servers concurrently
+    await asyncio.gather(flask_task, websocket_server_task)
+
 if __name__ == "__main__":
-    start_server = websockets.serve(handle_websocket, "localhost", 8765)
-    asyncio.get_event_loop().run_until_complete(start_server)
-    asyncio.get_event_loop().run_forever()
+    asyncio.run(start_servers())
